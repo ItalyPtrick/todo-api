@@ -49,3 +49,10 @@ uvicorn main:app --reload
 | GET    | /todos/{id} | 获取单条任务 |
 | PUT    | /todos/{id} | 更新任务     |
 | DELETE | /todos/{id} | 删除任务     |
+
+6. 项目脉络
+   main.py 组装所有东西，启动服务
+   database.py 提供数据库连接
+   models.py 定义表结构
+   schemas.py 定义输入输出格式
+   routers/todos.py 处理具体的增删改查逻辑
