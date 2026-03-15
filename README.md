@@ -63,7 +63,7 @@ uvicorn main:app --reload
 
    routers/todos.py — 大脑。决定调哪个函数，调用 schemas.py 验数据，调用 database.py 拿连接，调用 models.py 操作数据库。
 
-   schemas.py — 检查员。你传来的 JSON 格式对不对，字段类型对不对，不对直接返回 422，不让进。
+   schemas.py — 外交官。你传来的 JSON 格式对不对，字段类型对不对，不对直接返回 422，不让进。另一方面，听到后端的信息就返回给前端
 
    database.py — 水管工。负责建立和关闭数据库连接，把连接交给需要它的函数。
 

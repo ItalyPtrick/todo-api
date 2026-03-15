@@ -34,6 +34,7 @@ class TodoResponse(BaseModel):
     priority: int
     due_date: datetime | None
     created_at: datetime
+    updated_at: datetime | None
 
     model_config = {"from_attributes": True}
 

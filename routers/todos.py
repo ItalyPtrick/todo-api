@@ -104,6 +104,11 @@ async def update_todo(todo_id: int, todo: TodoUpdate, db: Session = Depends(get_
         db_todo.title = todo.title
     if todo.completed is not None:
         db_todo.completed = todo.completed
+    if todo.priority is not None:
+        db_todo.priority = todo.priority
+    if todo.due_date is not None:
+        db_todo.due_date = todo.due_date
+
     db.commit()  # 这时SQLAlchemy会追踪变化，并翻译成：
     # UPDATE todos SET completed = true WHERE id = 1;
     db.refresh(db_todo)
