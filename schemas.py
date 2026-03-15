@@ -3,6 +3,16 @@ from pydantic import BaseModel
 
 class TodoCreate(BaseModel):  # 创建任务时接收的请求体格式。
     title: str
+    completed: bool = False  # 默认值，用户不传就当作 False。
+    
+    model_config = {
+        "json_schema_extra":{
+            "example":{
+                "title":"学 FastAPI 路由",
+                "completed":False
+            }
+        }
+    }
 
 
 class TodoUpdate(BaseModel):  # 更新任务时接收的请求体格式。
