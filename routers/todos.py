@@ -58,6 +58,8 @@ async def get_todos(
     completed: bool | None = None,
     search: str | None = None,
     priority: int | None = None,
+    sort_by: str | None = None,
+    order: str = "asc",
     db: Session = Depends(get_db),
 ):
     query = db.query(Todo)
@@ -71,6 +73,26 @@ async def get_todos(
 
     if priority is not None:
         query = query.filter(Todo.priority == priority)
+
+    # 这是一个字典，把前端可能传的排序字段名 映射 到真实的数据库字段（SQLAlchemy的列对象）
+    SORT_FIELDS = {
+        "priority": Todo.priority,
+        "created_at": Todo.created_at,
+        "due_date": Todo.due_date,
+    }
+
+    # 判断用户是否传了我们支持的排序字段
+    if sort_by in SORT_FIELDS:
+        # 从字典里取出对应的 SQLAlchemy Column 对象
+        column = SORT_FIELDS[sort_by]
+
+        # 逻辑是：主排序按用户指定的字段， 次级排序固定 是 `created_at` 降序**（越新创建的越靠前）。
+        # `order` 参数只控制主排序方向，次级排序始终不变。
+
+        if order == "desc":
+            query = query.order_by(column.desc(), Todo.created_at.desc())
+        else:
+            query = query.order_by(column.asc(), Todo.created_at.asc())
 
     return query.offset(skip).limit(limit).all()
 
