@@ -1,12 +1,21 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 
 class TodoCreate(BaseModel):
-    title: str
+    title: str = Field(max_length=100)
     completed: bool = False
-    priority: int = 2
+    priority: int = Field(
+        default=2, ge=1, le=3
+    )  # ge = greater or equal，le = less or equal，priority 必须 ≥1 且 ≤3。
     due_date: datetime | None = None
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, v):
+        if not v.strip():
+            raise ValueError("标题不能是空白字符")
+        return v
 
     model_config = {
         "json_schema_extra": {
@@ -21,10 +30,17 @@ class TodoCreate(BaseModel):
 
 
 class TodoUpdate(BaseModel):
-    title: str | None = None
+    title: str | None = Field(default=None, max_length=100)
     completed: bool | None = None
-    priority: int | None = None
+    priority: int | None = Field(default=None, ge=1, le=3)
     due_date: datetime | None = None
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError("标题不能是空白字符")
+        return v
 
 
 class TodoResponse(BaseModel):
