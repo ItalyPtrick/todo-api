@@ -58,6 +58,11 @@ class TodoResponse(BaseModel):
     # ORM 对象是什么?
     # ORM 是 **Object Relational Mapping**，对象关系映射
 
+class TodoStats(BaseModel):
+    total: int
+    completed: int
+    uncompleted: int
+
 
 """
 SQLAlchemy 查出来的 Todo 对象长这样：
