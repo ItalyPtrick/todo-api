@@ -30,7 +30,12 @@ db.close()
 # 创建任务
 @router.post("/", response_model=TodoResponse, status_code=201)
 async def create_todo(todo: TodoCreate, db: Session = Depends(get_db)):
-    db_todo = Todo(title=todo.title, completed=todo.completed)
+    db_todo = Todo(
+        title=todo.title,
+        completed=todo.completed,
+        priority=todo.priority,
+        due_date=todo.due_date,
+    )
     db.add(db_todo)
     db.commit()
     db.refresh(db_todo)
@@ -59,7 +64,9 @@ async def get_todos(
         query = query.filter(Todo.completed == completed)
 
     if search is not None:
-        query = query.filter(Todo.title.contains(search)) # contains("FastAPI") 对应的 SQL 是 WHERE title LIKE '%FastAPI%'，匹配标题里任何位置包含这个词的记录。
+        query = query.filter(
+            Todo.title.contains(search)
+        )  # contains("FastAPI") 对应的 SQL 是 WHERE title LIKE '%FastAPI%'，匹配标题里任何位置包含这个词的记录。
 
     return query.offset(skip).limit(limit).all()
 
