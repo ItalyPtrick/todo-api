@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
-#从 SQLAlchemy 导入字段类型
+
+# 从 SQLAlchemy 导入字段类型
 from database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class Todo(Base):
@@ -11,8 +12,10 @@ class Todo(Base):
     completed = Column(Boolean, default=False)
     priority = Column(Integer, default=2)
     due_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc)) # 每次插入新记录时自动调用这个函数填入当前时间，不需要手动传值。
 
-'''
+
+"""
 翻译成 SQL 就是：
 CREATE TABLE todos (
     id      INTEGER PRIMARY KEY,
@@ -22,4 +25,4 @@ CREATE TABLE todos (
 
 models.py — 描述数据库表长什么样
 schemas.py — 描述 API 的输入输出长什么样
-'''
+"""
