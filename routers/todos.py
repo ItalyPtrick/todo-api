@@ -57,6 +57,7 @@ async def get_todos(
     limit: int = 10,
     completed: bool | None = None,
     search: str | None = None,
+    priority: int | None = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(Todo)
@@ -67,6 +68,9 @@ async def get_todos(
         query = query.filter(
             Todo.title.contains(search)
         )  # contains("FastAPI") 对应的 SQL 是 WHERE title LIKE '%FastAPI%'，匹配标题里任何位置包含这个词的记录。
+
+    if priority is not None:
+        query = query.filter(Todo.priority == priority)
 
     return query.offset(skip).limit(limit).all()
 
