@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class TodoCreate(BaseModel):
     title: str
     completed: bool = False
@@ -13,10 +14,11 @@ class TodoCreate(BaseModel):
                 "title": "学 FastAPI 路由",
                 "completed": False,
                 "priority": 2,
-                "due_date": "2025-04-01T00:00:00"
+                "due_date": "2025-04-01T00:00:00",
             }
         }
     }
+
 
 class TodoUpdate(BaseModel):
     title: str | None = None
@@ -24,16 +26,18 @@ class TodoUpdate(BaseModel):
     priority: int | None = None
     due_date: datetime | None = None
 
+
 class TodoResponse(BaseModel):
     id: int
     title: str
     completed: bool
     priority: int
     due_date: datetime | None
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
-    #ORM 对象不是字典，Pydantic 默认只认字典，加了 from_attributes=True 才能直接读对象属性完成转换。
+    # ORM 对象不是字典，Pydantic 默认只认字典，加了 from_attributes=True 才能直接读对象属性完成转换。
     # ORM 对象是什么?
     # ORM 是 **Object Relational Mapping**，对象关系映射
 

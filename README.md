@@ -56,3 +56,17 @@ uvicorn main:app --reload
    models.py 定义表结构
    schemas.py 定义输入输出格式
    routers/todos.py 处理具体的增删改查逻辑
+   ![路线图](docs/roadmap.png)
+
+   比喻每个文件干的事情：
+   main.py — 门卫。收到请求，看路径前缀是 /todos，转发给 todos.py 处理。
+
+   routers/todos.py — 大脑。决定调哪个函数，调用 schemas.py 验数据，调用 database.py 拿连接，调用 models.py 操作数据库。
+
+   schemas.py — 检查员。你传来的 JSON 格式对不对，字段类型对不对，不对直接返回 422，不让进。
+
+   database.py — 水管工。负责建立和关闭数据库连接，把连接交给需要它的函数。
+
+   models.py — 翻译官。把你的 Python 操作翻译成 SQL，写进 todo.db 文件。
+
+   todo.db — 仓库。真正存数据的地方，一个本地文件。
