@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import SessionLocal
 from models import Todo
-from schemas import TodoCreate, TodoUpdate, TodoResponse
+from schemas import TodoCreate, TodoUpdate, TodoResponse, TodoStats
 
 router = APIRouter()
 # 创建了一个路由集合，后面所有的 @router.get()、@router.post() 都是往这个集合里登记规则。
@@ -100,6 +101,17 @@ async def get_todos(
 # db.query(Todo).all() 翻译成 SQL 就是：
 # SELECT * FROM todos;
 # query决定了查哪个表
+
+
+# 统计任务
+@router.get("/stats", response_model=TodoStats)
+async def get_stats(db: Session = Depends(get_db)):
+    total = db.query(func.count(Todo.id)).scalar()  # SELECT COUNT(*) FROM todos;
+    completed = (
+        db.query(func.count(Todo.id)).filter(Todo.completed == True).scalar()
+    )  # SELECT COUNT(id) FROM todos WHERE completed = true;
+    uncompleted = total - completed
+    return {"total": total, "completed": completed, "uncompleted": uncompleted}
 
 
 # 查询单条任务
