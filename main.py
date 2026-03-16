@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from routers import todos
+from routers.auth import router as auth_router
 
 # 创建应用
 app = FastAPI(title="Todo API")
@@ -48,6 +49,8 @@ router.get("/{id}")     →   实际路径变成 /todos/{id}
 router.delete("/{id}")  →   实际路径变成 /todos/{id}
 
 """
+
+app.include_router(auth_router)  # 注册 auth 路由
 
 
 # 根路径

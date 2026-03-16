@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime
 
 
@@ -58,6 +58,7 @@ class TodoResponse(BaseModel):
     # ORM 对象是什么?
     # ORM 是 **Object Relational Mapping**，对象关系映射
 
+
 class TodoStats(BaseModel):
     total: int
     completed: int
@@ -97,3 +98,28 @@ TodoCreate / TodoUpdate 校验数据格式
     ↓
 TodoResponse 把 ORM 对象转成 JSON 返回给用户
 """
+
+# ---- User Schemas ----
+
+
+# 规定注册接口接收什么
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=6, max_length=72)
+
+
+# 规定注册接口返回什么（不包含密码相关字段）
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    created_at: datetime
+
+    """from_attributes=True 的作用是告诉 Pydantic：
+你可以直接读对象的属性来转换，不需要先变成字典。"""
+    model_config = ConfigDict(from_attributes=True)
+
+
+# 规定登录接口返回什么
+class Token(BaseModel):
+    access_token: str  # JWT 字符串
+    token_type: str

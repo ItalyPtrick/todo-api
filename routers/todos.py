@@ -1,31 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from database import SessionLocal
+from database import SessionLocal,get_db
 from models import Todo
 from schemas import TodoCreate, TodoUpdate, TodoResponse, TodoStats
 
 router = APIRouter()
 # 创建了一个路由集合，后面所有的 @router.get()、@router.post() 都是往这个集合里登记规则。
-
-
-# 依赖注入：每个请求自动获取数据库连接，用完自动关闭
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db  # 普通函数用 `return`，执行完就结束了。用 `yield` 的函数叫生成器，它可以暂停
-    finally:
-        db.close()
-
-
-"""
-Depends(get_db) 的意思是：每次这个路由被调用时，自动先执行 get_db，把结果作为 db 参数传进来。
-
-你不需要在每个路由里手动写：
-db = SessionLocal()
-# ... 用完
-db.close()
-"""
 
 
 # 创建任务
