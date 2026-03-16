@@ -12,13 +12,14 @@ class Todo(Base):
     completed = Column(Boolean, default=False)
     priority = Column(Integer, default=2)
     due_date = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc)) # 每次插入新记录时自动调用这个函数填入当前时间，不需要手动传值。
-
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )  # 每次插入新记录时自动调用这个函数填入当前时间，不需要手动传值。
     updated_at = Column(
-    DateTime,
-    default=lambda: datetime.now(timezone.utc),
-    onupdate=lambda: datetime.now(timezone.utc),
-)
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
 
 """

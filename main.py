@@ -3,14 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from routers import todos
 
-# 建表
-Base.metadata.create_all(bind=engine)
-"""
-这行在服务器启动时执行一次，作用是：
-扫描所有继承了 Base 的类（也就是 models.py 里的 Todo），如果数据库里还没有对应的表就自动创建。
-
-"""
-
 # 创建应用
 app = FastAPI(title="Todo API")
 """创建整个应用的实例.

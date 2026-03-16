@@ -9,6 +9,7 @@
 - SQLite
 - Pydantic v2
 - Uvicorn
+- Alembic 1.18
 
 ## 本地运行
 
@@ -32,54 +33,79 @@ pip install -r requirements.txt
 DATABASE_URL=sqlite:///./todo.db
 ```
 
-4. 启动服务
+4. 初始化数据库
+
+```bash
+alembic upgrade head
+```
+
+5. 启动服务
 
 ```bash
 uvicorn main:app --reload
 ```
 
-5. 访问接口文档：http://127.0.0.1:8000/docs
+6. 访问接口文档：http://127.0.0.1:8000/docs
+
+---
+
+## 数据库迁移
+
+项目使用 Alembic 管理数据库结构变更。
+
+修改 `models.py` 后，按以下步骤生成并执行迁移：
+
+```bash
+alembic revision --autogenerate -m "描述这次改了什么"
+alembic upgrade head
+```
+
+回滚上一个版本：
+
+```bash
+alembic downgrade -1
+```
 
 ---
 
 ## 数据库字段
 
-| 字段         | 类型     | 说明                     |
-| ------------ | -------- | ------------------------ |
-| id           | int      | 主键，自动生成           |
-| title        | str      | 标题，最长 100 字        |
-| completed    | bool     | 是否完成，默认 false     |
-| priority     | int      | 优先级，只能是 1 / 2 / 3 |
-| due_date     | datetime | 截止时间，可为空         |
-| created_at   | datetime | 创建时间，自动填入       |
-| updated_at   | datetime | 修改时间，每次更新自动刷新 |
+| 字段       | 类型     | 说明                       |
+| ---------- | -------- | -------------------------- |
+| id         | int      | 主键，自动生成             |
+| title      | str      | 标题，最长 100 字          |
+| completed  | bool     | 是否完成，默认 false       |
+| priority   | int      | 优先级，只能是 1 / 2 / 3   |
+| due_date   | datetime | 截止时间，可为空           |
+| created_at | datetime | 创建时间，自动填入         |
+| updated_at | datetime | 修改时间，每次更新自动刷新 |
 
 ---
 
 ## 接口列表
 
-| 方法   | 路径             | 说明         |
-| ------ | ---------------- | ------------ |
-| POST   | /todos/          | 创建任务     |
-| GET    | /todos/          | 获取任务列表 |
-| GET    | /todos/stats     | 获取统计数据 |
-| GET    | /todos/{id}      | 获取单条任务 |
-| PUT    | /todos/{id}      | 更新任务     |
-| DELETE | /todos/{id}      | 删除任务     |
+| 方法   | 路径         | 说明         |
+| ------ | ------------ | ------------ |
+| POST   | /todos/      | 创建任务     |
+| GET    | /todos/      | 获取任务列表 |
+| GET    | /todos/stats | 获取统计数据 |
+| GET    | /todos/{id}  | 获取单条任务 |
+| PUT    | /todos/{id}  | 更新任务     |
+| DELETE | /todos/{id}  | 删除任务     |
 
 ---
 
 ## GET /todos/ 查询参数
 
-| 参数      | 类型   | 说明                                          |
-| --------- | ------ | --------------------------------------------- |
-| skip      | int    | 分页偏移，默认 0                              |
-| limit     | int    | 每页数量，默认 10                             |
-| completed | bool   | 按完成状态筛选                                |
-| priority  | int    | 按优先级筛选（1 / 2 / 3）                     |
-| search    | str    | 标题模糊搜索                                  |
-| sort_by   | str    | 排序字段：priority / created_at / due_date    |
-| order     | str    | 排序方向：asc（默认）/ desc                   |
+| 参数      | 类型 | 说明                                       |
+| --------- | ---- | ------------------------------------------ |
+| skip      | int  | 分页偏移，默认 0                           |
+| limit     | int  | 每页数量，默认 10                          |
+| completed | bool | 按完成状态筛选                             |
+| priority  | int  | 按优先级筛选（1 / 2 / 3）                  |
+| search    | str  | 标题模糊搜索                               |
+| sort_by   | str  | 排序字段：priority / created_at / due_date |
+| order     | str  | 排序方向：asc（默认）/ desc                |
 
 示例：
 
@@ -105,10 +131,10 @@ GET /todos/?search=FastAPI&priority=1
 
 ## 输入校验规则
 
-| 字段     | 规则                          |
-| -------- | ----------------------------- |
-| title    | 不能为空白字符，最长 100 字   |
-| priority | 只能是 1、2、3                |
+| 字段     | 规则                        |
+| -------- | --------------------------- |
+| title    | 不能为空白字符，最长 100 字 |
+| priority | 只能是 1、2、3              |
 
 校验失败返回 `422 Unprocessable Entity`，响应体会说明哪个字段出了什么问题。
 
@@ -118,11 +144,20 @@ GET /todos/?search=FastAPI&priority=1
 
 ```
 todo_api/
+├── alembic/
+│   ├── versions/     # 迁移版本文件
+│   ├── env.py        # Alembic 核心配置
+│   └── script.py.mako
 ├── routers/
 │   ├── __init__.py
 │   └── todos.py      # 所有路由和业务逻辑
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   └── test_todos.py
 ├── .env              # 环境变量（不提交 Git）
 ├── .gitignore
+├── alembic.ini       # Alembic 配置
 ├── database.py       # 数据库连接
 ├── main.py           # 应用入口
 ├── models.py         # 数据库表结构
@@ -138,3 +173,4 @@ todo_api/
 - `models.py` — 定义数据库表结构（SQLAlchemy ORM）
 - `schemas.py` — 定义 API 输入输出格式，校验数据（Pydantic）
 - `routers/todos.py` — 处理所有 Todo 相关的增删改查逻辑
+- `alembic/` — 数据库迁移配置和版本历史
