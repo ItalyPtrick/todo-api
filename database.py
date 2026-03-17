@@ -13,15 +13,17 @@ import os
 
 load_dotenv()  # 把 `.env` 文件里的内容加载到环境变量里
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL"
-)  # os.getenv("DATABASE_URL") 读取其中的 DATABASE_URL
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# 修正 Render 的 URL 前缀（Render 给的是 postgres://，SQLAlchemy 需要 postgresql://）
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 """
 engine 是数据库的"连接器"，负责真正跟数据库文件通信。
-check_same_thread=False 是 SQLite 专属的配置。SQLite 默认只允许创建它的那个线程使用它，但 FastAPI 是异步多线程的，所以要关掉这个限制。换成 PostgreSQL 这行不需要。
+connect_args={"check_same_thread": False} 是 SQLite 专属配置，PostgreSQL 不需要。
 """
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL)
 
 """
 sessionmaker 是一个工厂，SessionLocal 是它生产出来的"Session 模板"。
@@ -43,6 +45,7 @@ Base = (
 .env 文件
   ↓ load_dotenv() 读取
 DATABASE_URL
+  ↓ 修正前缀（postgres:// → postgresql://）
   ↓ create_engine() 连接
 engine（连接器）
   ↓ sessionmaker() 包装
