@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from database import SessionLocal,get_db
-from models import Todo
+from database import SessionLocal, get_db
+from models import Todo, User
 from schemas import TodoCreate, TodoUpdate, TodoResponse, TodoStats
+from auth_utils import get_current_user
 
 router = APIRouter()
 # 创建了一个路由集合，后面所有的 @router.get()、@router.post() 都是往这个集合里登记规则。
@@ -11,12 +12,17 @@ router = APIRouter()
 
 # 创建任务
 @router.post("/", response_model=TodoResponse, status_code=201)
-async def create_todo(todo: TodoCreate, db: Session = Depends(get_db)):
+async def create_todo(
+    todo: TodoCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     db_todo = Todo(
         title=todo.title,
         completed=todo.completed,
         priority=todo.priority,
         due_date=todo.due_date,
+        owner_id=current_user.id,
     )
     db.add(db_todo)
     db.commit()
@@ -43,11 +49,15 @@ async def get_todos(
     sort_by: str | None = None,
     order: str = "asc",
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    query = db.query(Todo)
+    query = db.query(Todo).filter(
+        Todo.owner_id == current_user.id
+    )  # SELECT * FROM todos WHERE owner_id = 1; 只查当前用户的待办事项，增加安全性。
     if completed is not None:
-        query = query.filter(Todo.completed == completed)
-
+        query = query.filter(
+            Todo.completed == completed
+        )  # 如果用户传了 completed 参数，就加一个过滤条件，比如 completed=true 对应的 SQL 是 WHERE completed = true。
     if search is not None:
         query = query.filter(
             Todo.title.contains(search)
@@ -86,21 +96,33 @@ async def get_todos(
 
 # 统计任务
 @router.get("/stats", response_model=TodoStats)
-async def get_stats(db: Session = Depends(get_db)):
-    total = db.query(func.count(Todo.id)).scalar()  # SELECT COUNT(*) FROM todos;
+async def get_stats(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    total = (
+        db.query(func.count(Todo.id)).filter(Todo.owner_id == current_user.id).scalar()
+    )  # SELECT COUNT(id) FROM todos WHERE owner_id = 1;
     completed = (
-        db.query(func.count(Todo.id)).filter(Todo.completed == True).scalar()
-    )  # SELECT COUNT(id) FROM todos WHERE completed = true;
+        db.query(func.count(Todo.id))
+        .filter(Todo.owner_id == current_user.id, Todo.completed == True)
+        .scalar()
+    )  # SELECT COUNT(id) FROM todos WHERE owner_id = 1 AND completed = true;
     uncompleted = total - completed
     return {"total": total, "completed": completed, "uncompleted": uncompleted}
 
 
 # 查询单条任务
 @router.get("/{todo_id}", response_model=TodoResponse)
-async def get_todo(todo_id: int, db: Session = Depends(get_db)):
-    todo = db.query(Todo).filter(Todo.id == todo_id).first()
-    # filter(Todo.id == todo_id).first() 翻译成 SQL：
-    # SELECT * FROM todos WHERE id = 1 LIMIT 1;
+async def get_todo(
+    todo_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    todo = (
+        db.query(Todo)
+        .filter(Todo.id == todo_id, Todo.owner_id == current_user.id)
+        .first()
+    )  # SELECT * FROM todos WHERE id = 1 AND owner_id = 1;
 
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
@@ -109,8 +131,18 @@ async def get_todo(todo_id: int, db: Session = Depends(get_db)):
 
 # 更新任务
 @router.put("/{todo_id}", response_model=TodoResponse)
-async def update_todo(todo_id: int, todo: TodoUpdate, db: Session = Depends(get_db)):
-    db_todo = db.query(Todo).filter(Todo.id == todo_id).first()
+async def update_todo(
+    todo_id: int,
+    todo: TodoUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db_todo = (
+        db.query(Todo)
+        .filter(Todo.id == todo_id, Todo.owner_id == current_user.id)
+        .first()
+    )  # SELECT * FROM todos WHERE id = 1 AND owner_id = 1; 先查有没有，没有返回 404
+
     if not db_todo:
         raise HTTPException(
             status_code=404, detail="Todo not found"
@@ -135,8 +167,17 @@ async def update_todo(todo_id: int, todo: TodoUpdate, db: Session = Depends(get_
     "/{todo_id}", status_code=204
 )  # status_code=204 表示成功但没有返回内容，所以这个函数没有 return。
 # 204 是删除操作的标准状态码。
-async def delete_todo(todo_id: int, db: Session = Depends(get_db)):
-    db_todo = db.query(Todo).filter(Todo.id == todo_id).first()
+async def delete_todo(
+    todo_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db_todo = (
+        db.query(Todo)
+        .filter(Todo.id == todo_id, Todo.owner_id == current_user.id)
+        .first()
+    )  # SELECT * FROM todos WHERE id = 1 AND owner_id = 1; 先查有没有，没有返回 404
+
     if not db_todo:
         raise HTTPException(status_code=404, detail="Todo not found")
     db.delete(db_todo)  # DELETE FROM todos WHERE id = 1;

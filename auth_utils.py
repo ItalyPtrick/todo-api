@@ -46,3 +46,50 @@ def create_access_token(data: dict) -> str:
 # ② Payload = to_encode → Base64Url
 # ③ Signature = HMAC_SHA256(① + "." + ②, SECRET_KEY)
 # ④ 拼接返回 "eyJ....eyJ....Sfl..."
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from database import get_db
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/auth/login"
+)  # 告诉 FastAPI 登录接口的 URL，FastAPI 会自动在 Swagger 文档里生成一个输入框，让用户输入 JWT。
+
+
+# 用户认证依赖函数
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
+    # 定义一个通用的认证失败异常，后面验证过程中如果任何一步失败都抛这个异常，避免泄露过多信息。
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="无法验证身份",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:  # 验证 JWT，解密出 payload,从 payload 里取出用户 ID，然后查数据库拿到用户对象。
+        payload = jwt.decode(
+            token, SECRET_KEY, algorithms=[ALGORITHM]
+        )  # python-jose 在这一行同时做了三件事：验签、检查过期、解码 Payload。任何一个失败都会抛 JWTError，被 except 捕获返回 401。
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except (
+        JWTError
+    ):  # JWT 解密失败，可能是因为 token 无效、过期或者被篡改了，这时抛出认证失败异常。
+        raise credentials_exception
+
+    # 从数据库查用户，如果用户不存在，抛出认证失败异常；如果用户存在，返回用户对象。
+    from models import User
+
+    user = (
+        db.query(User).filter(User.id == int(user_id)).first()
+    )  # Token 里存的是字符串 "1"，查数据库要转成 int。
+    if (
+        user is None
+    ):  # 正常情况下 sub 一定有值，但防御性地检查一下。如果用户不存在，可能是因为用户被删除了，这时也抛出认证失败异常。
+        raise credentials_exception
+
+    # 认证成功，返回用户对象
+    return user

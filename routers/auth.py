@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User
@@ -38,9 +39,12 @@ from auth_utils import hash_password, verify_password, create_access_token
 
 # 登录接口，验证用户名和密码，成功后返回 JWT
 @router.post("/login", response_model=Token)
-def login(user_data: UserCreate, db: Session = Depends(get_db)):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),  # OAuth2PasswordBearer 是 OAuth2 标准的实现，OAuth2 标准规定：登录接口必须接收表单格式，不能是 JSON。
+    db: Session = Depends(get_db),
+):
     # 查用户
-    user = db.query(User).filter(User.username == user_data.username).first()
+    user = db.query(User).filter(User.username == form_data.username).first()
     if (
         not user
     ):  # 如果用户不存在，直接报错，不要告诉用户是用户名错了还是密码错了，增加安全性
@@ -50,7 +54,7 @@ def login(user_data: UserCreate, db: Session = Depends(get_db)):
 
     # 验证密码
     if not verify_password(
-        user_data.password, user.hashed_password
+        form_data.password, user.hashed_password
     ):  # verify_password() 会把用户输入的明文密码和数据库里的哈希密码进行对比，验证成功返回 True，否则返回 False。
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误"

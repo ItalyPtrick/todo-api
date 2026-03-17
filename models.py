@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 
 # 从 SQLAlchemy 导入字段类型
 from database import Base
@@ -20,6 +20,9 @@ class Todo(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    owner_id = Column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )  # 外键，关联到 users 表的 id 字段，表示这个待办事项属于哪个用户。nullable=False 表示这个字段不能为空，每个待办事项必须有一个所属用户。
 
 
 """
