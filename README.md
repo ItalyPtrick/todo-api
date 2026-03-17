@@ -1,37 +1,37 @@
 # Todo API
 
-基于 FastAPI + SQLAlchemy + SQLite 的待办事项 REST API，支持 JWT 用户认证与数据隔离。
+FastAPI + SQLAlchemy 实现的待办事项 REST API，支持 JWT 用户认证与数据隔离。
+
+**线上地址**：https://todo-api-s0hq.onrender.com  
+**接口文档**：https://todo-api-s0hq.onrender.com/docs
+
+> 免费托管，首次访问冷启动约需 30–50 秒。
+
+---
 
 ## 技术栈
 
-- FastAPI 0.135
-- SQLAlchemy 2.0
-- SQLite
-- Pydantic v2
-- Uvicorn
-- Alembic 1.18
-- python-jose（JWT）
-- passlib + bcrypt（密码哈希）
+- **FastAPI** 0.135 — Web 框架
+- **SQLAlchemy** 2.0 — ORM
+- **PostgreSQL**（生产）/ SQLite（本地开发）
+- **Pydantic v2** — 数据校验
+- **Alembic** 1.18 — 数据库迁移
+- **python-jose** — JWT
+- **passlib + bcrypt** — 密码哈希
+- **Uvicorn** — ASGI 服务器
+
+---
 
 ## 本地运行
 
-1. 克隆项目
-
+**前置条件**：Python 3.10+，建议使用虚拟环境。
 ```bash
 git clone https://github.com/ItalyPtrick/todo-api.git
 cd todo-api
-```
-
-2. 安装依赖
-
-```bash
 pip install -r requirements.txt
 ```
 
-3. 配置环境变量
-
 新建 `.env` 文件：
-
 ```
 DATABASE_URL=sqlite:///./todo.db
 SECRET_KEY=your_secret_key_here
@@ -39,95 +39,60 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
-`SECRET_KEY` 建议用以下命令生成：
-
+`SECRET_KEY` 生成方式：
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-4. 初始化数据库
-
+初始化数据库并启动：
 ```bash
 alembic upgrade head
-```
-
-5. 启动服务
-
-```bash
 uvicorn main:app --reload
 ```
 
-6. 访问接口文档：http://127.0.0.1:8000/docs
+访问 http://127.0.0.1:8000/docs
+
+---
+
+## 部署
+
+生产环境使用 **Render**（Web Service）+ **Supabase**（PostgreSQL）。
+
+启动命令：
+```bash
+alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+需要在平台配置以下环境变量：
+```
+DATABASE_URL=        # Supabase Session Pooler URL
+SECRET_KEY=          # 与本地相同或重新生成
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
 
 ---
 
 ## 认证流程
 
-所有 `/todos` 接口需要登录后才能访问。
-
+所有 `/todos` 接口需要携带 Token。
 ```
-POST /auth/register   注册账号
-POST /auth/login      登录，获取 access_token
+POST /auth/register   注册
+POST /auth/login      登录，返回 access_token
 ```
 
-登录成功后，在请求 Header 中携带 Token：
-
+登录后在请求 Header 中添加：
 ```
 Authorization: Bearer <access_token>
 ```
 
-Token 有效期为 30 分钟，过期后需重新登录。
+Token 有效期 30 分钟。
 
 ---
 
 ## 数据隔离
 
-每条 Todo 归属于创建它的用户，用户只能查看和操作自己的数据。
-
----
-
-## 数据库迁移
-
-项目使用 Alembic 管理数据库结构变更。
-
-修改 `models.py` 后，按以下步骤生成并执行迁移：
-
-```bash
-alembic revision --autogenerate -m "描述这次改了什么"
-alembic upgrade head
-```
-
-回滚上一个版本：
-
-```bash
-alembic downgrade -1
-```
-
----
-
-## 数据库字段
-
-### todos 表
-
-| 字段       | 类型     | 说明                       |
-| ---------- | -------- | -------------------------- |
-| id         | int      | 主键，自动生成             |
-| title      | str      | 标题，最长 100 字          |
-| completed  | bool     | 是否完成，默认 false       |
-| priority   | int      | 优先级，只能是 1 / 2 / 3   |
-| due_date   | datetime | 截止时间，可为空           |
-| created_at | datetime | 创建时间，自动填入         |
-| updated_at | datetime | 修改时间，每次更新自动刷新 |
-| owner_id   | int      | 外键，关联 users.id        |
-
-### users 表
-
-| 字段            | 类型     | 说明                   |
-| --------------- | -------- | ---------------------- |
-| id              | int      | 主键，自动生成         |
-| username        | str      | 用户名，唯一           |
-| hashed_password | str      | bcrypt 哈希后的密码    |
-| created_at      | datetime | 注册时间，自动填入     |
+每条 Todo 通过 `owner_id` 外键绑定到创建它的用户，接口层面自动过滤，用户只能看到自己的数据。
 
 ---
 
@@ -135,38 +100,37 @@ alembic downgrade -1
 
 ### 认证
 
-| 方法 | 路径             | 说明             | 是否需要 Token |
-| ---- | ---------------- | ---------------- | -------------- |
-| POST | /auth/register   | 注册             | 否             |
-| POST | /auth/login      | 登录，获取 Token | 否             |
+| 方法 | 路径 | 说明 | 需要 Token |
+| --- | --- | --- | --- |
+| POST | /auth/register | 注册 | 否 |
+| POST | /auth/login | 登录 | 否 |
 
 ### Todo
 
-| 方法   | 路径         | 说明         | 是否需要 Token |
-| ------ | ------------ | ------------ | -------------- |
-| POST   | /todos/      | 创建任务     | ✅             |
-| GET    | /todos/      | 获取任务列表 | ✅             |
-| GET    | /todos/stats | 获取统计数据 | ✅             |
-| GET    | /todos/{id}  | 获取单条任务 | ✅             |
-| PUT    | /todos/{id}  | 更新任务     | ✅             |
-| DELETE | /todos/{id}  | 删除任务     | ✅             |
+| 方法 | 路径 | 说明 | 需要 Token |
+| --- | --- | --- | --- |
+| POST | /todos/ | 创建 | ✅ |
+| GET | /todos/ | 列表（支持筛选排序） | ✅ |
+| GET | /todos/stats | 统计 | ✅ |
+| GET | /todos/{id} | 详情 | ✅ |
+| PUT | /todos/{id} | 更新 | ✅ |
+| DELETE | /todos/{id} | 删除 | ✅ |
 
 ---
 
 ## GET /todos/ 查询参数
 
-| 参数      | 类型 | 说明                                       |
-| --------- | ---- | ------------------------------------------ |
-| skip      | int  | 分页偏移，默认 0                           |
-| limit     | int  | 每页数量，默认 10                          |
-| completed | bool | 按完成状态筛选                             |
-| priority  | int  | 按优先级筛选（1 / 2 / 3）                  |
-| search    | str  | 标题模糊搜索                               |
-| sort_by   | str  | 排序字段：priority / created_at / due_date |
-| order     | str  | 排序方向：asc（默认）/ desc                |
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| skip | int | 分页偏移，默认 0 |
+| limit | int | 每页数量，默认 10 |
+| completed | bool | 按完成状态筛选 |
+| priority | int | 按优先级筛选（1 / 2 / 3） |
+| search | str | 标题模糊搜索 |
+| sort_by | str | 排序字段：priority / created_at / due_date |
+| order | str | asc（默认）/ desc |
 
 示例：
-
 ```
 GET /todos/?sort_by=priority&order=asc
 GET /todos/?completed=false&sort_by=due_date&order=asc
@@ -176,7 +140,6 @@ GET /todos/?search=FastAPI&priority=1
 ---
 
 ## GET /todos/stats 响应示例
-
 ```json
 {
   "total": 10,
@@ -187,54 +150,76 @@ GET /todos/?search=FastAPI&priority=1
 
 ---
 
-## 输入校验规则
+## 输入校验
 
-| 字段     | 规则                        |
-| -------- | --------------------------- |
-| title    | 不能为空白字符，最长 100 字 |
-| priority | 只能是 1、2、3              |
-| username | 长度 3 - 50 字符            |
-| password | 长度 6 - 72 字符            |
+| 字段 | 规则 |
+| --- | --- |
+| title | 不能为空白字符，最长 100 字 |
+| priority | 只能是 1、2、3 |
+| username | 3–50 字符 |
+| password | 6–72 字符 |
 
-校验失败返回 `422 Unprocessable Entity`，响应体会说明哪个字段出了什么问题。
+校验失败返回 `422`，响应体包含具体字段和原因。
+
+---
+
+## 数据库字段
+
+### todos
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | int | 主键 |
+| title | str | 标题，最长 100 字 |
+| completed | bool | 默认 false |
+| priority | int | 1 / 2 / 3 |
+| due_date | datetime | 截止时间，可为空 |
+| created_at | datetime | 创建时间，自动填入 |
+| updated_at | datetime | 修改时间，自动刷新 |
+| owner_id | int | 外键，关联 users.id |
+
+### users
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | int | 主键 |
+| username | str | 唯一 |
+| hashed_password | str | bcrypt 哈希 |
+| created_at | datetime | 注册时间，自动填入 |
+
+---
+
+## 数据库迁移
+```bash
+# 生成新迁移
+alembic revision --autogenerate -m "描述变更内容"
+
+# 执行迁移
+alembic upgrade head
+
+# 回滚一步
+alembic downgrade -1
+```
 
 ---
 
 ## 项目结构
-
 ```
 todo_api/
 ├── alembic/
-│   ├── versions/     # 迁移版本文件
-│   ├── env.py        # Alembic 核心配置
+│   ├── versions/       # 迁移版本文件
+│   ├── env.py
 │   └── script.py.mako
 ├── routers/
-│   ├── __init__.py
-│   ├── todos.py      # Todo 路由
-│   └── auth.py       # 认证路由（注册、登录）
+│   ├── auth.py         # 注册、登录
+│   └── todos.py        # Todo CRUD
 ├── tests/
-│   ├── __init__.py
 │   ├── conftest.py
 │   └── test_todos.py
-├── .env              # 环境变量（不提交 Git）
-├── .gitignore
-├── alembic.ini       # Alembic 配置
-├── auth_utils.py     # 密码哈希、JWT 工具函数
-├── database.py       # 数据库连接
-├── main.py           # 应用入口
-├── models.py         # 数据库表结构
-├── schemas.py        # 请求/响应数据格式
-├── requirements.txt
-└── README.md
+├── auth_utils.py       # JWT 与密码工具函数
+├── database.py         # 数据库连接与 Session
+├── main.py             # 应用入口
+├── models.py           # ORM 表结构
+├── schemas.py          # Pydantic 请求/响应模型
+└── requirements.txt
 ```
-
-各文件职责：
-
-- `main.py` — 应用入口，注册路由，启动服务
-- `database.py` — 创建数据库连接，提供 Session 和 get_db 依赖
-- `models.py` — 定义数据库表结构（SQLAlchemy ORM）
-- `schemas.py` — 定义 API 输入输出格式，校验数据（Pydantic）
-- `auth_utils.py` — 密码哈希（bcrypt）、JWT 生成与验证、get_current_user 依赖
-- `routers/todos.py` — Todo 增删改查路由，所有接口需要认证
-- `routers/auth.py` — 注册、登录路由
-- `alembic/` — 数据库迁移配置和版本历史
