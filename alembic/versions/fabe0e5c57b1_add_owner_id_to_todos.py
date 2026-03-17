@@ -20,7 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # 1. 加列（允许 NULL，因为旧数据还没有 owner）
+    op.add_column("todos", sa.Column("owner_id", sa.Integer(), nullable=True))
+    
+    # 2. 给旧数据赋默认值（id=1 的用户）
     op.execute("UPDATE todos SET owner_id = 1 WHERE owner_id IS NULL")
+    
+    # 3. 加外键约束
+    op.create_foreign_key(
+        "fk_todos_owner_id_users",
+        "todos", "users",
+        ["owner_id"], ["id"]
+    )
 
 
 def downgrade() -> None:
