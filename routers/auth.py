@@ -62,8 +62,8 @@ def login(
 
     # 生成 Token
     token = create_access_token(
-        data={"sub": str(user.id)}
-    )  # JWT 的 payload 里通常会放一个 "sub" 字段，代表这个 token 是给哪个用户的。这里放用户的 id，前端以后需要这个 id 来区分不同用户的数据。
+        data={"sub": user.username}
+    )  # JWT 的 payload 里通常会放一个 "sub" 字段，代表这个 token 是给哪个用户的。这里放用户的 username，前端可以直接显示用户名。
     return {
         "access_token": token,
         "token_type": "bearer",

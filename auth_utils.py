@@ -68,12 +68,12 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    try:  # 验证 JWT，解密出 payload,从 payload 里取出用户 ID，然后查数据库拿到用户对象。
+    try:  # 验证 JWT，解密出 payload,从 payload 里取出用户名，然后查数据库拿到用户对象。
         payload = jwt.decode(
             token, SECRET_KEY, algorithms=[ALGORITHM]
         )  # python-jose 在这一行同时做了三件事：验签、检查过期、解码 Payload。任何一个失败都会抛 JWTError，被 except 捕获返回 401。
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        username: str = payload.get("sub")
+        if username is None:
             raise credentials_exception
     except (
         JWTError
@@ -84,8 +84,8 @@ def get_current_user(
     from models import User
 
     user = (
-        db.query(User).filter(User.id == int(user_id)).first()
-    )  # Token 里存的是字符串 "1"，查数据库要转成 int。
+        db.query(User).filter(User.username == username).first()
+    )  # Token 里存的是用户名，直接用于查询。
     if (
         user is None
     ):  # 正常情况下 sub 一定有值，但防御性地检查一下。如果用户不存在，可能是因为用户被删除了，这时也抛出认证失败异常。
